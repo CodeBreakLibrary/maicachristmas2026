@@ -1251,7 +1251,7 @@
   // caption = optional line under the photo. Leave '' for none.
   const LETTER_PHOTOS = [
     { img:'', caption:'[A caption for the photo under page 1.]' },
-    { img:'', caption:'[A caption for the photo under page 2.]' }
+    { img:'photos/letter2.jpg', caption:'' }
   ];
   function buildLetterPhotos(){
     document.querySelectorAll('.letter-photo').forEach(fig=>{
@@ -1740,7 +1740,7 @@
   // ---------- the surprise: one silly photo flashes on her screen, tinted blue, with a boom ----------
   // EDIT HERE: img = the photo (e.g. 'photos/silly.jpg'), sound = the boom (e.g. 'sounds/boom.mp3').
   // Leave img '' to switch it off. It fires once, at a random moment minSec–maxSec after she gets past the name gate.
-  const PRANK = { img:'', sound:'', minSec:25, maxSec:70, holdMs:900 };
+  const PRANK = { img:'photos/silly.jpg', sound:'sounds/boom.mp3', minSec:25, maxSec:70, holdMs:900 };
   let prankArmed = false;
   function armPrank(){
     if(prankArmed || !PRANK.img) return;

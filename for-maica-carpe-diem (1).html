@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#152018" id="themeColor">
+<meta name="color-scheme" content="dark">
+<title>For Maica — Carpe Diem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Courier+Prime:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parchment:#ECE1C6;
+    --parchment-dark:#DDCFA9;
+    --ink:#2A2015;
+    --forest:#152018;
+    --forest-2:#1E2E22;
+    --oxblood:#5B2A2A;
+    --gold:#B8935A;
+    --gold-bright:#D8B978;
+    --line: rgba(184,147,90,0.35);
+
+    /* spacing scale */
+    --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:32px; --s-7:48px;
+
+    /* motion tokens */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  }
+  *{box-sizing:border-box;}
+
+  /* ---------- mobile-native baseline ---------- */
+  html{
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
+  }
+  html,body{
+    height:100%;
+    margin:0;
+    background:var(--forest);
+    overflow:hidden;
+    overscroll-behavior:none;
+    font-family:'Cormorant Garamond', serif;
+  }
+  body{ height:100dvh; }
+
+  button, [role="button"]{
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  input{ user-select: text; -webkit-user-select: text; }
+
+  #stage{
+    position:relative;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+  }
+
+  /* outgoing scene leaves fast, incoming one arrives a beat later */
+  .scene{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 250ms var(--ease-out);
+    padding: max(24px, env(safe-area-inset-top,0px)) 24px max(24px, env(safe-area-inset-bottom,0px));
+  }
+  .scene.active{
+    opacity:1;
+    pointer-events:auto;
+    transition:opacity 600ms var(--ease-out) 150ms;
+  }
+
+  /* ---------- shared texture layers ---------- */
+  .vignette{
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%);
+    pointer-events:none;
+  }
+  .grain{
+    position:absolute; inset:0;
+    opacity:0.05;
+    pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* above the scene backgrounds (they're opaque), below the ornament card (z60), nav (z50 fixed) and secret note (z200) */
+  #snow{position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:30;}
+  .flake{
+    position:absolute;
+    top:-10px;
+    width:3px; height:3px;
+    border-radius:50%;
+    background:rgba(236,225,198,0.55);
+    transition:background 600ms var(--ease-out);
+    animation-name: fall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  /* on the parchment letter pages, flakes turn to soft brown specks so they stay visible but quiet */
+  #snow.on-paper .flake{ background:rgba(90,70,40,0.3); }
+  @keyframes fall{
+    to{ transform: translateY(110vh) translateX(var(--drift,0px)); }
+  }
+
+  .candle{
+    position:relative;
+    width:10px;
+    height:34px;
+  }
+  .candle .flame{
+    position:absolute;
+    left:50%; top:-16px;
+    width:10px; height:16px;
+    transform:translateX(-50%);
+    background:radial-gradient(circle at 50% 70%, #FFE9B0 0%, var(--gold-bright) 45%, transparent 75%);
+    border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
+    filter:blur(0.3px);
+    animation:flicker 2.6s ease-in-out infinite;
+    transform-origin:50% 100%;
+  }
+  .candle .body{
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+    border-radius:2px;
+  }
+  @keyframes flicker{
+    0%,100%{ transform:translateX(-50%) rotate(-1.5deg) scaleY(1); }
+    30%{ transform:translateX(-50%) rotate(1deg) scaleY(1.05); }
+    55%{ transform:translateX(-50%) rotate(-1deg) scaleY(0.95); }
+    80%{ transform:translateX(-50%) rotate(1.5deg) scaleY(1.03); }
+  }
+
+  /* ---------- nav ---------- */
+  #nav{
+    position:fixed;
+    left:0; right:0;
+    bottom: max(10px, env(safe-area-inset-bottom,0px));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    z-index:50;
+  }
+  .dot{
+    width:6px; height:6px;
+    border-radius:50%;
+    background:rgba(184,147,90,0.35);
+    transition:background 200ms var(--ease-out), transform 200ms var(--ease-out);
+  }
+  .dot.on{ background:var(--gold-bright); transform:scale(1.3); }
+  .arrow{
+    background:none; border:none;
+    color:var(--gold);
+    font-family:'Cormorant Garamond', serif;
+    font-size:15px;
+    letter-spacing:0.12em;
+    cursor:pointer;
+    min-width:44px; min-height:44px;
+    padding:0 6px;
+    display:inline-flex; align-items:center; justify-content:center;
+    opacity:0.85;
+    transition:opacity 160ms ease, color 160ms ease, transform 160ms var(--ease-out);
+  }
+  .arrow:active:not(:disabled){ transform:scale(0.92); }
+  .arrow:disabled{ opacity:0.25; cursor:default; }
+  .arrow:focus-visible, .open-btn:focus-visible, .list-btn:focus-visible, .orn-close:focus-visible, .orn:focus-visible, .star:focus-visible{
+    outline:1px solid var(--gold-bright);
+    outline-offset:3px;
+  }
+  @media (hover: hover) and (pointer: fine){
+    .arrow:hover:not(:disabled){ opacity:1; color:var(--gold-bright); }
+  }
+
+  /* ---------- music player (only exists when MUSIC.src is set) ---------- */
+  .music-btn{
+    position:fixed;
+    top:max(10px, env(safe-area-inset-top,0px));
+    right:max(10px, env(safe-area-inset-right,0px));
+    z-index:55;
+    width:44px; height:44px;
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:0; padding:0;
+    color:var(--gold);
+    cursor:pointer;
+    opacity:0;
+    transition:opacity 400ms var(--ease-out), color 250ms var(--ease-out), transform 160ms var(--ease-out);
+  }
+  .music-btn.ready{ opacity:0.8; }
+  .music-btn:active{ transform:scale(0.92); }
+  .music-btn svg, .mp-mute svg{ width:22px; height:22px; display:block; }
+  .music-btn .waves, .mp-mute .waves{ transition:opacity 200ms var(--ease-out); }
+  .music-btn.muted .waves, .mp-mute.muted .waves{ opacity:0; }
+  .music-btn .slash, .mp-mute .slash{ opacity:0; transition:opacity 200ms var(--ease-out); }
+  .music-btn.muted .slash, .mp-mute.muted .slash{ opacity:1; }
+  .music-btn:focus-visible{ outline:1px solid var(--gold-bright); outline-offset:-6px; }
+  /* parchment letter pages need a darker mark */
+  body.on-paper .music-btn{ color:var(--oxblood); }
+
+  .music-panel{
+    position:fixed;
+    top:calc(max(10px, env(safe-area-inset-top,0px)) + 46px);
+    right:max(10px, env(safe-area-inset-right,0px));
+    z-index:56;
+    width:min(280px, calc(100vw - 20px));
+    padding:var(--s-3) var(--s-4) var(--s-2);
+    background:linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+    color:var(--ink);
+    box-shadow:0 18px 40px rgba(0,0,0,0.45);
+    transform-origin:top right;
+    opacity:0;
+    transform:translateY(-6px) scale(0.97);
+    pointer-events:none;
+    visibility:hidden;
+    transition:opacity 160ms var(--ease-out), transform 160ms var(--ease-out), visibility 0s linear 160ms;
+  }
+  .music-panel.open{
+    opacity:1; transform:none; pointer-events:auto; visibility:visible;
+    transition:opacity 200ms var(--ease-out), transform 200ms var(--ease-out), visibility 0s;
+  }
+  .mp-row{ display:flex; align-items:center; gap:var(--s-3); min-height:40px; }
+  .mp-time{
+    font-family:'Courier Prime', monospace;
+    font-size:12px;
+    color:rgba(60,45,25,0.8);
+    min-width:34px;
+    font-variant-numeric:tabular-nums;
+  }
+  .mp-time:last-child{ text-align:right; }
+  .mp-mute{
+    flex:none;
+    width:36px; height:36px;
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:0; padding:0;
+    color:var(--oxblood);
+    cursor:pointer;
+    transition:transform 160ms var(--ease-out);
+  }
+  .mp-mute:active{ transform:scale(0.92); }
+  .mp-mute:focus-visible{ outline:1px solid var(--oxblood); outline-offset:-4px; }
+  .mp-note{
+    font-family:'Cormorant Garamond', serif; font-style:italic;
+    font-size:14px; line-height:1.3; color:rgba(60,45,25,0.8);
+  }
+  .mp-range{
+    -webkit-appearance:none; appearance:none;
+    flex:1; min-width:0;
+    height:32px; margin:0;
+    background:transparent;
+    cursor:pointer;
+    --p:0%;
+  }
+  .mp-range:disabled{ opacity:0.4; cursor:default; }
+  .mp-range::-webkit-slider-runnable-track{
+    height:3px; border-radius:2px;
+    background:linear-gradient(to right, var(--oxblood) var(--p), rgba(90,70,40,0.25) var(--p));
+  }
+  .mp-range::-moz-range-track{
+    height:3px; border-radius:2px;
+    background:linear-gradient(to right, var(--oxblood) var(--p), rgba(90,70,40,0.25) var(--p));
+  }
+  .mp-range::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:16px; height:16px; margin-top:-6.5px;
+    border-radius:50%; border:0;
+    background:var(--oxblood);
+    box-shadow:0 1px 3px rgba(0,0,0,0.35);
+    transition:transform 160ms var(--ease-out);
+  }
+  .mp-range::-moz-range-thumb{
+    width:16px; height:16px;
+    border-radius:50%; border:0;
+    background:var(--oxblood);
+    box-shadow:0 1px 3px rgba(0,0,0,0.35);
+    transition:transform 160ms var(--ease-out);
+  }
+  .mp-range:active::-webkit-slider-thumb{ transform:scale(1.2); }
+  .mp-range:active::-moz-range-thumb{ transform:scale(1.2); }
+  .mp-range:focus-visible{ outline:1px solid var(--oxblood); outline-offset:2px; }
+  @media (hover: hover) and (pointer: fine){
+    .music-btn.ready:hover{ opacity:1; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .music-btn:active, .mp-mute:active{ transform:none; }
+    .music-panel, .music-panel.open{ transform:none; }
+  }
+
+  h1,h2,h3{ font-weight:500; margin:0; }
+  .cover-title, .final-line2, .reveal-text, .orn-title{ text-wrap:balance; }
+
+  /* ================= SCENE 0 : COVER ================= */
+  #scene-cover{
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(216,185,120,0.10), transparent 55%),
+      linear-gradient(180deg, var(--forest) 0%, #0F1712 100%);
+  }
+  .cover-wrap{
+    position:relative;
+    text-align:center;
+    max-width:520px;
+  }
+  /* first-visit entrance: short stagger, backwards-fill so :active still works afterwards */
+  .cover-wrap > *{
+    animation: rise 500ms var(--ease-out) backwards;
+  }
+  .cover-wrap > :nth-child(1){ animation-delay:80ms; }
+  .cover-wrap > :nth-child(2){ animation-delay:140ms; }
+  .cover-wrap > :nth-child(3){ animation-delay:200ms; }
+  .cover-wrap > :nth-child(4){ animation-delay:280ms; }
+  .cover-wrap > :nth-child(5){ animation-delay:400ms; }
+  @keyframes rise{
+    from{ opacity:0; transform:translateY(8px); }
+  }
+  .cover-eyebrow{
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-weight:400;
+    color:var(--gold);
+    font-size:clamp(14px,3.6vw,17px);
+    letter-spacing:0.04em;
+  }
+  .cover-title{
+    font-size:clamp(44px,12vw,84px);
+    color:var(--parchment);
+    line-height:1.02;
+    letter-spacing:-0.01em;
+    margin-top:var(--s-5);
+  }
+  .cover-sub{
+    font-family:'Cormorant Garamond', serif;
+    font-weight:300;
+    color:rgba(236,225,198,0.7);
+    font-size:clamp(14px,3.4vw,17px);
+    margin-top:14px;
+    font-style:italic;
+  }
+  .open-btn{
+    margin-top:var(--s-7);
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--gold-bright);
+    font-family:'Cormorant Garamond', serif;
+    font-size:clamp(13px,3vw,15px);
+    letter-spacing:0.06em;
+    padding:14px 30px;
+    min-height:44px;
+    border-radius:1px;
+    cursor:pointer;
+    transition:border-color 200ms ease, background 200ms ease, transform 160ms var(--ease-out);
+  }
+  .open-btn:active{ transform:scale(0.97); background:rgba(184,147,90,0.12); }
+  @media (hover: hover) and (pointer: fine){
+    .open-btn:hover{ border-color:var(--gold-bright); background:rgba(184,147,90,0.08); }
+  }
+  .cover-candle{ margin:var(--s-4) auto var(--s-5); }
+
+  /* ================= SCENE 1 : EPIGRAPH ================= */
+  #scene-epigraph{
+    background:linear-gradient(180deg, #16211A 0%, #0F1712 100%);
+  }
+  /* ---------- nice/naughty list gate ---------- */
+  .list-gate{
+    position:relative; z-index:3;
+    display:flex; align-items:center; justify-content:center;
+    width:100%;
+  }
+  .list-card{
+    background:linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+    max-width:400px; width:100%;
+    padding:32px 28px 26px;
+    box-shadow:0 30px 60px rgba(0,0,0,0.4);
+    position:relative;
+  }
+  .list-card.nope{ animation:shake 300ms var(--ease-out); }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    25%{ transform:translateX(-6px); }
+    75%{ transform:translateX(6px); }
+  }
+  .list-title{
+    font-size:clamp(26px,6vw,32px);
+    text-align:center;
+    color:var(--ink);
+    letter-spacing:0.02em;
+  }
+  .list-sub{
+    text-align:center;
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:14px;
+    color:var(--oxblood);
+    margin-top:var(--s-2);
+  }
+  .list-columns{ display:flex; gap:14px; margin:22px 0 18px; }
+  .list-col{ flex:1; border-top:1px solid rgba(90,70,40,0.3); padding-top:8px; }
+  .list-col-h{
+    font-family:'Courier Prime', monospace;
+    font-size:12px; letter-spacing:0.08em;
+    color:rgba(60,45,25,0.72);
+    text-align:center;
+  }
+  .list-prompt{
+    text-align:center;
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:14px;
+    color:#3A2E1E;
+    margin-bottom:16px;
+  }
+  .list-form{ display:flex; gap:8px; }
+  .list-input{
+    flex:1;
+    min-width:0;
+    background:rgba(255,255,255,0.4);
+    border:1px solid rgba(90,70,40,0.3);
+    padding:10px 12px;
+    font-family:'Courier Prime', monospace;
+    font-size:16px; /* iOS zooms the page on focus below 16px */
+    color:var(--ink);
+    outline:none;
+    border-radius:0;
+    transition:border-color 160ms ease;
+  }
+  .list-input:focus{ border-color:var(--oxblood); }
+  .list-btn{
+    background:var(--oxblood);
+    color:var(--parchment);
+    border:none;
+    padding:10px 18px;
+    min-height:44px;
+    font-family:'Cormorant Garamond', serif;
+    letter-spacing:0.05em;
+    font-size:15px;
+    cursor:pointer;
+    transition:background 160ms ease, transform 160ms var(--ease-out);
+  }
+  .list-btn:active{ transform:scale(0.97); }
+  @media (hover: hover) and (pointer: fine){
+    .list-btn:hover{ background:#4A2222; }
+  }
+  .list-msg{
+    margin-top:12px;
+    text-align:center;
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:14px;
+    color:var(--oxblood);
+    min-height:20px;
+  }
+
+  .blackout{
+    position:absolute; inset:0;
+    background:#000;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.8s var(--ease-out);
+    z-index:10;
+  }
+  .blackout.show{ opacity:1; pointer-events:auto; }
+
+  .list-reveal{
+    position:absolute; inset:0;
+    background:#000;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:30px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 1s var(--ease-out);
+    z-index:5;
+  }
+  .list-reveal.show{ opacity:1; pointer-events:auto; }
+  .reveal-text{
+    max-width:480px;
+    text-align:center;
+    font-size:clamp(25px,6.4vw,38px);
+    font-style:italic;
+    color:var(--gold-bright);
+    line-height:1.45;
+    opacity:0;
+    transition:opacity 1.6s var(--ease-out);
+    padding:0 20px;
+  }
+  .reveal-text.show{ opacity:1; }
+
+  .flame.blowout{
+    animation:blowout 0.7s var(--ease-out) forwards !important;
+  }
+  @keyframes blowout{
+    0%{ opacity:1; transform:translateX(-50%) scale(1); }
+    40%{ opacity:0.6; transform:translateX(-50%) scale(1.3) skewX(6deg); }
+    100%{ opacity:0; transform:translateX(-50%) scale(0.2) translateY(-6px); }
+  }
+  .smoke-wisp{
+    position:absolute;
+    left:50%; top:-16px;
+    width:4px; height:4px;
+    background:rgba(200,200,200,0.5);
+    border-radius:50%;
+    transform:translateX(-50%);
+    animation:wisp 1.4s var(--ease-out) forwards;
+    pointer-events:none;
+  }
+  @keyframes wisp{
+    0%{ opacity:0.6; transform:translateX(-50%) translateY(0) scale(1); }
+    100%{ opacity:0; transform:translateX(-50%) translateY(-40px) scale(4); }
+  }
+
+  /* ================= SCENE: ORNAMENT TREE ================= */
+  #scene-tree{
+    background:
+      radial-gradient(ellipse at 50% 35%, rgba(184,147,90,0.10), transparent 60%),
+      linear-gradient(180deg, #152018 0%, #0F1712 100%);
+    padding-top:36px;
+    padding-bottom:120px;
+  }
+  .tree-box{
+    position:relative;
+    height:100%;
+    max-height:520px;
+    aspect-ratio:3 / 4;
+    max-width:100%;
+  }
+  .tree-svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+  /* garland lights: slow, staggered breathing (opacity only) */
+  .tw{ animation:twinkle 4.2s ease-in-out infinite; animation-delay:var(--d,0s); }
+  @keyframes twinkle{ 0%,100%{ opacity:0.55; } 50%{ opacity:1; } }
+
+  /* each ornament is its own little SVG shape (see ORN_SHAPES in the script) */
+  .orn{
+    position:absolute;
+    width:13%; min-width:44px; aspect-ratio:1;
+    transform:translate(-50%,-50%);
+    border:0; padding:0;
+    background:none;
+    cursor:pointer;
+    filter:drop-shadow(0 3px 4px rgba(0,0,0,0.45)) grayscale(0);
+    transition:opacity 400ms var(--ease-out), filter 400ms var(--ease-out), transform 160ms var(--ease-out);
+  }
+  .orn svg{ width:100%; height:100%; display:block; overflow:visible; pointer-events:none; }
+  /* "tap me" halo: transform + opacity only */
+  .orn::after{
+    content:"";
+    position:absolute; inset:-20%;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(216,185,120,0.55), rgba(216,185,120,0) 65%);
+    opacity:0;
+    pointer-events:none;
+    z-index:-1;
+  }
+  .orn.locked{ opacity:0.3; filter:drop-shadow(0 3px 4px rgba(0,0,0,0.45)) grayscale(0.5); cursor:default; }
+  .orn.active::after{ animation:ornRing 1.8s var(--ease-out) infinite; }
+  .orn.active:active{ transform:translate(-50%,-50%) scale(0.95); }
+  @media (hover: hover) and (pointer: fine){
+    .orn.active:hover{ transform:translate(-50%,-50%) scale(1.08); }
+    .orn.active:hover:active{ transform:translate(-50%,-50%) scale(0.95); }
+  }
+  .orn.done{ filter:drop-shadow(0 0 6px rgba(216,185,120,0.85)) grayscale(0); }
+  @keyframes ornRing{
+    0%{ opacity:0.8; transform:scale(0.85); }
+    100%{ opacity:0; transform:scale(1.5); }
+  }
+
+  .star{
+    position:absolute; left:50%; top:10.5%;
+    width:15%; min-width:44px; aspect-ratio:1;
+    transform:translate(-50%,-50%);
+    background:none; border:0; padding:0;
+    cursor:default;
+  }
+  .star svg{ width:100%; height:100%; display:block; overflow:visible; }
+  .star polygon{ fill:#5C5643; stroke:#5C5643; stroke-width:2; stroke-linejoin:round; transition:fill 600ms var(--ease-out), stroke 600ms var(--ease-out); }
+  .star .facets{ fill:none; stroke:rgba(0,0,0,0.22); stroke-width:0.7; stroke-linecap:round; }
+  .star.ready{ cursor:pointer; }
+  .star.ready polygon{ fill:var(--gold-bright); stroke:var(--gold-bright); }
+  .star.ready svg{ filter:drop-shadow(0 0 8px rgba(216,185,120,0.9)); animation:starGlow 1.8s ease-in-out infinite; }
+  @keyframes starGlow{
+    0%,100%{ filter:drop-shadow(0 0 6px rgba(216,185,120,0.7)); }
+    50%{ filter:drop-shadow(0 0 16px rgba(216,185,120,1)); }
+  }
+  .star.burst{ animation:starBurst .9s var(--ease-out) forwards; }
+  @keyframes starBurst{
+    0%{ transform:translate(-50%,-50%) scale(1); opacity:1; }
+    60%{ transform:translate(-50%,-50%) scale(2.4); opacity:1; }
+    100%{ transform:translate(-50%,-50%) scale(3.4); opacity:0; }
+  }
+  .star.nope{ animation:nope 300ms var(--ease-out); }
+  @keyframes nope{
+    0%,100%{ transform:translate(-50%,-50%); }
+    25%{ transform:translate(calc(-50% - 5px),-50%); }
+    75%{ transform:translate(calc(-50% + 5px),-50%); }
+  }
+
+  .tree-hint{
+    position:absolute; left:0; right:0; bottom:64px;
+    text-align:center;
+    font-family:'Cormorant Garamond', serif; font-style:italic;
+    font-size:14px;
+    color:rgba(236,225,198,0.6);
+    padding:0 20px;
+  }
+
+  /* exit is quick (180ms), entrance is a touch slower (250ms) */
+  .orn-modal{
+    position:absolute; inset:0;
+    z-index:60;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(6,10,8,0.78);
+    opacity:0; pointer-events:none;
+    transition:opacity 180ms var(--ease-out);
+    padding:24px;
+  }
+  .orn-modal.open{ opacity:1; pointer-events:auto; transition-duration:250ms; }
+  .orn-card{
+    position:relative;
+    width:100%; max-width:340px; max-height:82%;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    background:linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+    padding:26px 24px 22px;
+    box-shadow:0 30px 60px rgba(0,0,0,0.55);
+    transform:rotate(-0.8deg);
+  }
+  .orn-card.pop{ animation:cardUnfold 380ms var(--ease-out); }
+  @keyframes cardUnfold{
+    from{ transform:translateY(14px) scale(0.94) rotate(-3deg); opacity:0; }
+    to{ transform:translateY(0) scale(1) rotate(-0.8deg); opacity:1; }
+  }
+  .orn-photo img{
+    width:100%; max-height:200px; object-fit:cover; display:block;
+    border:6px solid #FFF8EA;
+    box-shadow:0 6px 14px rgba(0,0,0,0.3);
+    transform:rotate(-1.5deg);
+    margin-bottom:16px;
+  }
+  .orn-title{
+    font-size:clamp(20px,5vw,25px);
+    color:var(--ink);
+    text-align:center;
+    margin-bottom:10px;
+  }
+  .orn-text{
+    font-family:'Courier Prime', monospace;
+    font-size:13.5px; line-height:1.8;
+    color:#3A2E1E;
+    white-space:pre-line;
+  }
+  .orn-text .fill{ color:var(--oxblood); font-family:'Cormorant Garamond', serif; font-style:italic; }
+  .orn-close{
+    display:block; margin:18px auto 0;
+    background:transparent;
+    border:1px solid rgba(90,70,40,0.4);
+    color:var(--oxblood);
+    font-family:'Cormorant Garamond', serif;
+    font-size:14px; letter-spacing:0.08em;
+    padding:8px 20px; min-height:44px; cursor:pointer;
+    transition:background 160ms ease, transform 160ms var(--ease-out);
+  }
+  .orn-close:active{ transform:scale(0.97); }
+  @media (hover: hover) and (pointer: fine){
+    .orn-close:hover{ background:rgba(91,42,42,0.08); }
+  }
+
+  /* ================= SCENE 2..N : LETTER PAGES ================= */
+  .scene.letter{
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.25), transparent 60%),
+      var(--parchment);
+    align-items:stretch;
+  }
+  .letter-frame{
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: max(56px, env(safe-area-inset-top,0px)) 20px max(70px, env(safe-area-inset-bottom,0px));
+  }
+  .letter-page{
+    width:100%;
+    max-width:560px;
+    height:100%;
+    max-height:720px;
+    padding:var(--s-6) clamp(20px,5vw,44px) var(--s-6);
+    overflow-y:auto;
+    /* the scene is the paper: soft top/bottom fade replaces the old border + drop shadow */
+    -webkit-mask-image:linear-gradient(transparent, #000 24px, #000 calc(100% - 24px), transparent);
+    mask-image:linear-gradient(transparent, #000 24px, #000 calc(100% - 24px), transparent);
+    overscroll-behavior:contain;
+    position:relative;
+  }
+  .letter-page::-webkit-scrollbar{ width:6px; }
+  .letter-page::-webkit-scrollbar-thumb{ background:rgba(90,70,40,0.25); border-radius:3px; }
+
+  .letter-kicker{
+    font-family:'Courier Prime', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:var(--oxblood);
+    text-align:right;
+    margin-bottom:22px;
+  }
+  .letter-salutation{
+    font-family:'Cormorant Garamond', serif;
+    font-size:clamp(24px,5.4vw,30px);
+    color:var(--ink);
+    margin-bottom:18px;
+  }
+  .letter-body{
+    font-family:'Courier Prime', monospace;
+    font-size:clamp(14px,3.6vw,16px);
+    line-height:1.85;
+    color:#3A2E1E;
+  }
+  .letter-body p{ margin:0 0 1.2em; text-wrap:pretty; }
+  .letter-body .fill{
+    color:var(--oxblood);
+    font-style:italic;
+    font-family:'Cormorant Garamond', serif;
+    font-size:0.98em;
+  }
+  .letter-sign{
+    margin-top:26px;
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:clamp(18px,4vw,21px);
+    color:var(--ink);
+  }
+
+  /* photo "print" tucked in under each page; fades in after the text finishes typing */
+  .letter-photo{
+    margin:var(--s-6) 0 var(--s-2);
+    text-align:center;
+    opacity:0;
+    transform:translateY(8px);
+    transition:opacity 500ms var(--ease-out), transform 500ms var(--ease-out);
+  }
+  .letter-photo.show{ opacity:1; transform:none; }
+  .letter-photo img, .letter-photo .photo-ph{
+    display:block;
+    width:100%;
+    max-width:420px;
+    margin:0 auto;
+    border:8px solid #FFF8EA;
+    box-shadow:0 6px 16px rgba(60,40,20,0.28);
+    transform:rotate(-1.2deg);
+  }
+  .letter-photo[data-photo="1"] img, .letter-photo[data-photo="1"] .photo-ph{ transform:rotate(1deg); }
+  .letter-photo img{ max-height:320px; object-fit:cover; }
+  .letter-photo .photo-ph{
+    aspect-ratio:4 / 3;
+    display:flex; align-items:center; justify-content:center;
+    padding:var(--s-4);
+    background:rgba(90,70,40,0.08);
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:15px;
+    line-height:1.5;
+    color:var(--oxblood);
+  }
+  .letter-photo figcaption{
+    margin-top:var(--s-4);
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:clamp(16px,3.8vw,18px);
+    line-height:1.5;
+    color:var(--ink);
+    text-wrap:balance;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .letter-photo{ transform:none; transition:opacity 200ms ease; }
+  }
+
+  /* ================= FINAL SCENE ================= */
+  #scene-final{
+    background:radial-gradient(ellipse at 50% 55%, rgba(184,147,90,0.10), transparent 60%), linear-gradient(180deg, #0F1712 0%, #0A100C 100%);
+  }
+  .final-wrap{
+    text-align:center;
+    max-width:560px;
+  }
+  .final-line1{
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:clamp(15px,3.6vw,18px);
+    color:rgba(236,225,198,0.75);
+  }
+  .final-line2{
+    margin-top:16px;
+    font-size:clamp(34px,8.6vw,58px);
+    color:var(--gold-bright);
+    line-height:1.1;
+    letter-spacing:-0.005em;
+  }
+  .final-candles{
+    display:flex; gap:22px; justify-content:center;
+    margin-top:38px;
+  }
+
+  /* ---------- typewriter reveal ---------- */
+  .ch{
+    opacity:0;
+    transition:opacity 140ms var(--ease-out);
+  }
+  .ch.show{ opacity:1; }
+
+  /* ---------- quill + inkwell (right-handed: inkwell sits on the right) ---------- */
+  .letter-frame{ position:relative; }
+  .quill{
+    position:absolute; left:0; top:0; z-index:2;
+    width:46px;
+    pointer-events:none;
+    opacity:0;
+    transition:transform 90ms var(--ease-out), opacity 240ms var(--ease-out);
+    will-change:transform;
+  }
+  .quill.travel{ transition:transform 380ms var(--ease-in-out), opacity 240ms var(--ease-out); }
+  .quill img{ display:block; width:100%; height:auto; transform-origin:4% 96%; animation:quill-write 520ms ease-in-out infinite alternate; }
+  @keyframes quill-write{ from{ transform:rotate(-2deg); } to{ transform:rotate(2.5deg); } }
+  .inkwell{
+    position:absolute; right:14px; bottom:26px; z-index:1;
+    width:34px; height:auto;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 240ms var(--ease-out);
+  }
+  .quill.on, .inkwell.on{ opacity:1; }
+
+  /* ---------- timeline ---------- */
+  .tl{ position:relative; margin-top:14px; padding-left:26px; }
+  .tl::before{
+    content:""; position:absolute; left:5px; top:8px; bottom:8px; width:1px;
+    background:linear-gradient(180deg, #3F6FA8, rgba(63,111,168,0.25));
+  }
+  .tl-item{
+    position:relative; padding-bottom:30px;
+    opacity:0; transform:translateY(12px);
+    transition:opacity 280ms var(--ease-out), transform 280ms var(--ease-out);
+  }
+  .tl-item.show{ opacity:1; transform:none; }
+  .tl-item::before{
+    content:""; position:absolute; left:-26px; top:5px; width:11px; height:11px;
+    border-radius:50%; background:#3F6FA8; border:2px solid var(--parchment);
+    box-shadow:0 0 0 1px rgba(63,111,168,0.5);
+  }
+  .tl-when{ font-family:'Courier Prime', monospace; font-size:11px; letter-spacing:0.08em; color:var(--oxblood); }
+  .tl-title{ font-family:'Cormorant Garamond', serif; font-size:22px; line-height:1.2; color:var(--ink); margin:3px 0 4px; }
+  .tl-text{ font-family:'Cormorant Garamond', serif; font-style:italic; font-size:17px; line-height:1.6; color:var(--ink); text-wrap:pretty; }
+  .tl-item img{ display:block; width:100%; max-height:200px; object-fit:cover; margin-top:10px; border-radius:2px; box-shadow:0 6px 16px rgba(42,32,21,0.2); }
+  .tl-end{ padding-bottom:12px; font-family:'Cormorant Garamond', serif; font-style:italic; font-size:17px; color:var(--oxblood); }
+  @media (prefers-reduced-motion: reduce){ .tl-item{ opacity:1; transform:none; transition:none; } }
+  /* surprise flash: photo blended over blue */
+  .prank{
+    position:fixed; inset:0; z-index:300;
+    background:#1740B5;
+    opacity:0; pointer-events:none;
+    transition:opacity 140ms var(--ease-out);
+  }
+  .prank.on{ opacity:1; transition-duration:0ms; }
+  .prank img{ display:block; width:100%; height:100%; object-fit:cover; mix-blend-mode:luminosity; filter:grayscale(1) contrast(1.25) brightness(.7); }
+  .prank.on img{ animation:prank-pop 160ms var(--ease-out); }
+  @keyframes prank-pop{ from{ transform:scale(1.15); } to{ transform:scale(1); } }
+  @media (prefers-reduced-motion: reduce){ .prank.on img{ animation:none; } }
+  .blot{
+    position:absolute; right:54px; bottom:30px; width:26px;
+    pointer-events:none;
+    opacity:0; transform:rotate(var(--rot,0deg)) scale(.6);
+    transition:opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
+  }
+  .blot svg{ display:block; width:100%; height:auto; fill:var(--ink); }
+  .blot.on{ opacity:.6; transform:rotate(var(--rot,0deg)); }
+  @media (prefers-reduced-motion: reduce){ .blot{ display:none; } }
+  @media (prefers-reduced-motion: reduce){ .quill, .inkwell{ display:none; } }
+
+  /* ---------- hold-to-reveal candles ---------- */
+  .final-candles .candle{
+    cursor:pointer;
+    touch-action:none;
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-touch-callout:none;
+  }
+  /* the candle is 10×34px; widen the hit area without changing the look (30px wide < 32px spacing) */
+  .final-candles .candle::after{
+    content:"";
+    position:absolute;
+    inset:-14px -10px;
+  }
+  /* release: snappy */
+  .final-candles .candle .flame{
+    transition:transform 200ms var(--ease-out), filter 200ms var(--ease-out);
+  }
+  /* press: slow and deliberate, linear because it is a progress cue */
+  .final-candles .candle.holding .flame{
+    transform:translateX(-50%) scale(1.8);
+    filter:drop-shadow(0 0 14px var(--gold-bright));
+    animation:none;
+    transition:transform 1200ms linear, filter 1200ms linear;
+  }
+  .final-hint{
+    margin-top:22px;
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:13px;
+    letter-spacing:0.04em;
+    color:rgba(236,225,198,0.5);
+  }
+
+  /* ---------- secret scene ---------- */
+  .scene.secret{
+    background:radial-gradient(ellipse at 50% 45%, rgba(184,147,90,0.14), transparent 60%), linear-gradient(180deg, #0A100C 0%, #060907 100%);
+    z-index:200;
+  }
+  .secret-note{
+    max-width:420px;
+    background:linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+    padding:36px 30px 28px;
+    box-shadow:0 30px 70px rgba(0,0,0,0.5);
+    transform:rotate(-1.2deg);
+    position:relative;
+  }
+  .secret-kicker{
+    font-family:'Courier Prime', monospace;
+    font-size:10px;
+    letter-spacing:0.1em;
+    color:var(--oxblood);
+    margin-bottom:14px;
+  }
+  .secret-body{
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:clamp(17px,4.2vw,20px);
+    line-height:1.7;
+    color:var(--ink);
+  }
+  .secret-body .fill{ color:var(--oxblood); }
+  .secret-sign{
+    margin-top:20px;
+    font-family:'Cormorant Garamond', serif;
+    font-size:15px;
+    color:var(--ink);
+    text-align:right;
+  }
+  .secret-close{
+    margin-top:26px;
+    text-align:center;
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:13px;
+    color:rgba(236,225,198,0.6);
+  }
+
+  .sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+
+  /* ---------- reduced motion: fewer and gentler, not zero ---------- */
+  @media (prefers-reduced-motion: reduce){
+    #snow{ display:none; }
+    .tw{ animation:none; }
+    .candle .flame{ animation:none; }
+    .cover-wrap > *{ animation:none; }
+    .orn.active::after{ animation:none; opacity:0.6; }
+    .star.ready svg{ animation:none; }
+    .star.burst{ animation:starFade 300ms ease forwards; }
+    .star.nope, .list-card.nope{ animation:none; }
+    .orn-card.pop{ animation:cardFade 200ms ease; }
+    .smoke-wisp{ display:none; }
+    .flame.blowout{ animation:starFade 400ms ease forwards !important; }
+    .final-candles .candle.holding .flame{ transform:translateX(-50%); }
+    .arrow:active:not(:disabled), .open-btn:active, .list-btn:active, .orn-close:active{ transform:none; }
+    @keyframes starFade{ to{ opacity:0; } }
+    @keyframes cardFade{ from{ opacity:0; } to{ opacity:1; } }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- SNOW -->
+  <div id="snow"></div>
+
+  <!-- SCENE 0: COVER -->
+  <section class="scene active" id="scene-cover" data-index="0">
+    <div class="vignette"></div><div class="grain"></div>
+    <div class="cover-wrap">
+      <div class="cover-candle">
+        <div class="candle" style="margin:0 auto;"><div class="body"></div><div class="flame"></div></div>
+      </div>
+      <div class="cover-eyebrow">a letter, kept for Christmas</div>
+      <h1 class="cover-title">For&nbsp;Maica</h1>
+      <div class="cover-sub">from your twin</div>
+      <button class="open-btn" onclick="goTo(1)">open, when you're ready</button>
+    </div>
+  </section>
+
+  <!-- SCENE 1: THE LIST (password gate) -->
+  <section class="scene" id="scene-epigraph" data-index="1">
+    <div class="vignette"></div><div class="grain"></div>
+
+    <div class="list-gate" id="listGate">
+      <div class="list-card" id="listCard">
+        <div class="list-title">the list</div>
+        <div class="list-sub">nice or naughty — christmas eve check</div>
+        <div class="list-columns">
+          <div class="list-col"><div class="list-col-h">nice</div></div>
+          <div class="list-col"><div class="list-col-h">naughty</div></div>
+        </div>
+        <div class="list-prompt">type your name to find out which list you're on</div>
+        <form class="list-form" id="listForm">
+          <input class="list-input" id="listInput" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="your name">
+          <button class="list-btn" type="submit">check</button>
+        </form>
+        <div class="list-msg" id="listMsg"></div>
+      </div>
+    </div>
+
+    <div class="blackout" id="blackout"></div>
+
+    <div class="list-reveal" id="listReveal">
+      <div class="candle"><div class="body"></div><div class="flame" id="revealFlame"></div></div>
+      <div class="reveal-text" id="revealText">i don't think santa has a list for people who are just that awesome.</div>
+    </div>
+  </section>
+
+  <!-- SCENE 2: THE TREE (open every ornament, then the star) -->
+  <section class="scene" id="scene-tree" data-index="2">
+    <div class="vignette"></div><div class="grain"></div>
+    <div class="tree-box" id="treeBox">
+      <svg class="tree-svg" viewBox="0 0 300 400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- boughs: scalloped, drooping tiers -->
+          <path id="tierA" d="M150 150C146 190 98 222 60 256C46 268 38 282 36 296Q58.8 324 81.6 296Q104.4 324 127.2 296Q150 324 172.8 296Q195.6 324 218.4 296Q241.2 324 264 296C262 282 254 268 240 256C202 222 154 190 150 150Z"/>
+          <path id="tierB" d="M150 95C146 128 108 158 82 188C70 202 62 214 62 226Q84 252 106 226Q128 252 150 226Q172 252 194 226Q216 252 238 226C238 214 230 202 218 188C192 158 154 128 150 95Z"/>
+          <path id="tierC" d="M150 52C147 80 118 106 104 128C96 140 90 148 90 156Q110 178 130 156Q150 178 170 156Q190 178 210 156C210 148 204 140 196 128C182 106 153 80 150 52Z"/>
+          <!-- garland swags -->
+          <path id="garA" d="M72 250Q111 284 150 262Q189 284 228 250"/>
+          <path id="garB" d="M92 190Q121 212 150 198Q179 212 208 190"/>
+          <path id="garC" d="M110 128Q130 144 150 134Q170 144 190 128"/>
+
+          <linearGradient id="bough" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#386645"/>
+            <stop offset="1" stop-color="#1A3322"/>
+          </linearGradient>
+          <linearGradient id="boughLight" x1="0" y1="0" x2="1" y2="0.3">
+            <stop offset="0" stop-color="#fff" stop-opacity=".10"/>
+            <stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+            <stop offset="1" stop-color="#000" stop-opacity=".30"/>
+          </linearGradient>
+          <pattern id="needles" width="9" height="9" patternUnits="userSpaceOnUse">
+            <path d="M1 7L4 2M5 8L8 4" stroke="#0B1A10" stroke-opacity=".35" stroke-width="1" stroke-linecap="round" fill="none"/>
+            <path d="M3 4L6 9M7 3L9 6" stroke="#7CB085" stroke-opacity=".16" stroke-width="1" stroke-linecap="round" fill="none"/>
+          </pattern>
+          <linearGradient id="trunk" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#4A301B"/>
+            <stop offset=".5" stop-color="#5E3D23"/>
+            <stop offset="1" stop-color="#2E1D10"/>
+          </linearGradient>
+          <linearGradient id="pot" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#733434"/>
+            <stop offset=".55" stop-color="#5B2A2A"/>
+            <stop offset="1" stop-color="#36191A"/>
+          </linearGradient>
+          <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#E6C98A"/>
+            <stop offset="1" stop-color="#B8935A"/>
+          </linearGradient>
+          <radialGradient id="glow">
+            <stop offset="0" stop-color="#FFE9B0" stop-opacity=".9"/>
+            <stop offset="1" stop-color="#FFE9B0" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="aura">
+            <stop offset="0" stop-color="#D8B978" stop-opacity=".13"/>
+            <stop offset="1" stop-color="#D8B978" stop-opacity="0"/>
+          </radialGradient>
+          <!-- shared by every ornament -->
+          <radialGradient id="ornShade" cx=".35" cy=".3" r=".8">
+            <stop offset=".5" stop-color="#000" stop-opacity="0"/>
+            <stop offset="1" stop-color="#000" stop-opacity=".5"/>
+          </radialGradient>
+        </defs>
+
+        <ellipse cx="150" cy="190" rx="150" ry="180" fill="url(#aura)"/>
+        <ellipse cx="150" cy="368" rx="72" ry="8" fill="rgba(0,0,0,0.4)"/>
+        <path d="M139 296L142 336H158L161 296Z" fill="url(#trunk)"/>
+        <path d="M118 336H182L176 366H124Z" fill="url(#pot)"/>
+        <rect x="113" y="330" width="74" height="9" rx="2" fill="url(#rim)"/>
+
+        <g>
+          <use href="#tierA" transform="translate(0 6)" fill="rgba(0,0,0,0.38)"/>
+          <use href="#tierA" fill="url(#bough)"/>
+          <use href="#tierA" fill="url(#needles)"/>
+          <use href="#tierA" fill="url(#boughLight)" stroke="rgba(216,185,120,0.14)" stroke-width="1"/>
+        </g>
+        <g>
+          <use href="#tierB" transform="translate(0 6)" fill="rgba(0,0,0,0.38)"/>
+          <use href="#tierB" fill="url(#bough)"/>
+          <use href="#tierB" fill="url(#needles)"/>
+          <use href="#tierB" fill="url(#boughLight)" stroke="rgba(216,185,120,0.14)" stroke-width="1"/>
+        </g>
+        <g>
+          <use href="#tierC" transform="translate(0 6)" fill="rgba(0,0,0,0.38)"/>
+          <use href="#tierC" fill="url(#bough)"/>
+          <use href="#tierC" fill="url(#needles)"/>
+          <use href="#tierC" fill="url(#boughLight)" stroke="rgba(216,185,120,0.14)" stroke-width="1"/>
+        </g>
+
+        <g fill="none" stroke-linecap="round">
+          <use href="#garA" stroke="#B8935A" stroke-width="1.2"/>
+          <use href="#garB" stroke="#B8935A" stroke-width="1.2"/>
+          <use href="#garC" stroke="#B8935A" stroke-width="1.2"/>
+          <use href="#garA" stroke="#D8B978" stroke-width="3" stroke-dasharray="0.1 8" opacity=".85"/>
+          <use href="#garB" stroke="#D8B978" stroke-width="3" stroke-dasharray="0.1 8" opacity=".85"/>
+          <use href="#garC" stroke="#D8B978" stroke-width="3" stroke-dasharray="0.1 8" opacity=".85"/>
+        </g>
+
+        <g>
+          <g class="tw" style="--d:0s"><circle cx="91.5" cy="263.5" r="6" fill="url(#glow)"/><circle cx="91.5" cy="263.5" r="1.7" fill="#FFF1C7"/></g>
+          <g class="tw" style="--d:1.3s"><circle cx="130.5" cy="269.5" r="6" fill="url(#glow)"/><circle cx="130.5" cy="269.5" r="1.7" fill="#FFF1C7"/></g>
+          <g class="tw" style="--d:2.4s"><circle cx="169.5" cy="269.5" r="6" fill="url(#glow)"/><circle cx="169.5" cy="269.5" r="1.7" fill="#FFF1C7"/></g>
+          <g class="tw" style="--d:0.7s"><circle cx="208.5" cy="263.5" r="6" fill="url(#glow)"/><circle cx="208.5" cy="263.5" r="1.7" fill="#FFF1C7"/></g>
+          <g class="tw" style="--d:1.9s"><circle cx="106.5" cy="199" r="6" fill="url(#glow)"/><circle cx="106.5" cy="199" r="1.7" fill="#FFF1C7"/></g>
+          <g class="tw" style="--d:3.1s"><circle cx="150" cy="198" r="6" fill="url(#glow)"/><circle cx="150" cy="198" r="1.7" fill="#FFF1C7"/></g>
+          <g class="tw" style="--d:0.4s"><circle cx="130" cy="137.5" r="6" fill="url(#glow)"/><circle cx="130" cy="137.5" r="1.7" fill="#FFF1C7"/></g>
+          <g class="tw" style="--d:2.8s"><circle cx="170" cy="137.5" r="6" fill="url(#glow)"/><circle cx="170" cy="137.5" r="1.7" fill="#FFF1C7"/></g>
+        </g>
+      </svg>
+      <button class="star" id="starBtn" type="button" aria-label="The star">
+        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><polygon points="20,2 25,15 39,15 28,24 32,38 20,30 8,38 12,24 1,15 15,15"/><path class="facets" d="M20 22L20 2M20 22L39 15M20 22L32 38M20 22L8 38M20 22L1 15"/></svg>
+      </button>
+    </div>
+    <div class="tree-hint" id="treeHint"></div>
+
+    <div class="orn-modal" id="ornModal">
+      <div class="orn-card" id="ornCard">
+        <div class="orn-photo" id="ornPhoto"></div>
+        <div class="orn-title" id="ornTitle"></div>
+        <div class="orn-text" id="ornText"></div>
+        <button class="orn-close" id="ornClose" type="button">hang it back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCENE 3: LETTER PAGE 1 -->
+  <section class="scene letter" id="scene-letter1" data-index="3">
+    <div class="letter-frame">
+      <article class="letter-page">
+        <div class="letter-kicker">Christmas — 2026</div>
+        <div class="letter-salutation">My dear Maica,</div>
+        <div class="letter-body">
+          <p>so first things first, i trust that you wont judge my lack of grammar and punctuation here 🙂. Merry Christmas twinn! so i want to thank you for really being here for me when i need you. dont think i forgot about what you wrote me for my birthday, it’s the most special thing i’ve received this year (especially since ur the only one who wrote something and not just a generic happy birthday).</p>
+          <p>I really want to thank you for being my best friend even if i may not be yours. it really means a lot to me</p>
+          <p>as we end this year, i hope to be able to chika and rant w/ you more. and i want you to know that im also here for you if you ever need anything, i may look retarded most of the time, but i still can use my brain!</p>
+        </div>
+        <figure class="letter-photo" data-photo="0"></figure>
+      </article>
+    </div>
+  </section>
+
+  <!-- SCENE 3: LETTER PAGE 2 -->
+  <section class="scene letter" id="scene-letter2" data-index="3">
+    <div class="letter-frame">
+      <article class="letter-page">
+        <div class="letter-body" style="margin-top:6px;">
+          <p>I hope next year brings you allllll the happiness you’ve been planning for and a few wonderful surprises you’d never see coming. I hope your future holds the fulfillment of your dreams and the sudden discovery of new passions you didn’t know you had.</p>
+          <p>Okay now I’m gonna be completely honest. I stalked the living hell out of your socmed, to the point I found your middle name, baptism and 1st birthday photos…to see what you’d want for christmas, to no avail. I found that you like trinkets, but that’s soooo generic.. So all i can ask is that you dont be shy and tell me if you’re missing anything from a set or something you want because i believe that everyone should be able to get what they want every now and then.</p>
+        </div>
+        <div class="letter-sign">— always, your twin.</div>
+        <figure class="letter-photo" data-photo="1"></figure>
+      </article>
+    </div>
+  </section>
+
+  <!-- SCENE: TIMELINE (reuses the paper look of the letter pages) -->
+  <section class="scene letter timeline" id="scene-timeline">
+    <div class="letter-frame">
+      <article class="letter-page">
+        <div class="letter-kicker">Us, so far</div>
+        <div class="letter-salutation">How we got here</div>
+        <div class="tl" id="tl"></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- SCENE 4: FINAL -->
+  <section class="scene" id="scene-final" data-index="4">
+    <div class="vignette"></div><div class="grain"></div>
+    <div class="final-wrap">
+      <div class="final-line1">and before you close the page —</div>
+      <div class="final-line2">oh, and remember twin,<br>carpe diem.</div>
+      <div class="final-candles">
+        <div class="candle"><div class="body"></div><div class="flame"></div></div>
+        <div class="candle"><div class="body"></div><div class="flame"></div></div>
+        <div class="candle"><div class="body"></div><div class="flame"></div></div>
+      </div>
+      <div class="final-hint">(some things wait for patient hands)</div>
+    </div>
+  </section>
+
+  <!-- SECRET SCENE: reached by holding a final candle -->
+  <section class="scene secret" id="scene-secret">
+    <div class="vignette"></div><div class="grain"></div>
+    <div class="secret-note">
+      <div class="secret-kicker">found you.</div>
+      <div class="secret-body">
+        <span class="fill">[the one line you almost didn't include — the truest, smallest thing. save it for here, where she had to go looking for it.]</span>
+      </div>
+      <div class="secret-sign">— your twin, always</div>
+    </div>
+    <div class="secret-close">tap anywhere to close</div>
+  </section>
+
+</div>
+
+<!-- NAV -->
+<div id="nav">
+  <button class="arrow" id="prevBtn" onclick="step(-1)" aria-label="Previous">&larr;</button>
+  <div id="dots" style="display:flex; gap:8px;"></div>
+  <button class="arrow" id="nextBtn" onclick="step(1)" aria-label="Next">&rarr;</button>
+</div>
+
+<script>
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const scenes = Array.from(document.querySelectorAll('.scene:not(.secret)'));
+  const total = scenes.length;
+  let current = 0;
+
+  const themeColorMeta = document.getElementById('themeColor');
+
+  const dotsEl = document.getElementById('dots');
+  scenes.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' on' : '');
+    dotsEl.appendChild(d);
+  });
+  const dots = Array.from(dotsEl.children);
+
+  // ---------- photos under each letter page ----------
+  // EDIT HERE: one entry per letter page (page 1, page 2).
+  // img = a path like "photos/us.jpg" next to this file, or a data: URI. Leave '' to show the placeholder frame.
+  // caption = optional line under the photo. Leave '' for none.
+  const LETTER_PHOTOS = [
+    { img:'', caption:'[A caption for the photo under page 1.]' },
+    { img:'', caption:'[A caption for the photo under page 2.]' }
+  ];
+  function buildLetterPhotos(){
+    document.querySelectorAll('.letter-photo').forEach(fig=>{
+      const p = LETTER_PHOTOS[+fig.dataset.photo] || {};
+      fig.textContent = '';
+      if(p.img){
+        const im = document.createElement('img');
+        im.src = p.img;
+        im.alt = p.caption || '';
+        im.decoding = 'async';
+        fig.appendChild(im);
+      } else {
+        const ph = document.createElement('div');
+        ph.className = 'photo-ph';
+        ph.textContent = '[a photo goes here — set img in LETTER_PHOTOS]';
+        fig.appendChild(ph);
+      }
+      if(p.caption){
+        const c = document.createElement('figcaption');
+        c.textContent = p.caption;
+        fig.appendChild(c);
+      }
+    });
+  }
+  buildLetterPhotos();
+
+  // ---------- background music ----------
+  // EDIT HERE: src = a path next to this file, e.g. 'music/song.mp3' (mp3 or m4a play everywhere). Leave '' for no music.
+  // volume = starting volume, 0 to 1. She can change it with the slider (iPhones always use the device volume).
+  const MUSIC = { src:'', volume:0.5 };
+
+  (function setupMusic(){
+    if(!MUSIC.src) return;
+    const audio = new Audio();
+    audio.src = MUSIC.src;
+    audio.loop = true;
+    audio.preload = 'auto';
+
+    // iOS ignores script-set volume; detect it so we can show a note instead of a dead slider
+    audio.volume = 0.5;
+    const volumeControllable = Math.abs(audio.volume - 0.5) < 0.01;
+    audio.volume = 0;
+
+    const ICON =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="M4 9.5H8L13 5.5V18.5L8 14.5H4Z" fill="currentColor" fill-opacity=".15"/>'
+      + '<g class="waves"><path d="M16 9.2Q18 12 16 14.8"/><path d="M18.6 6.8Q22 12 18.6 17.2"/></g>'
+      + '<path class="slash" d="M17 9.5L22 14.5M22 9.5L17 14.5"/>'
+      + '</svg>';
+
+    // opener button (top right)
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'music-btn';
+    btn.setAttribute('aria-label', 'Music controls');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', 'musicPanel');
+    btn.innerHTML = ICON;
+    document.body.appendChild(btn);
+
+    // player card
+    const panel = document.createElement('div');
+    panel.className = 'music-panel';
+    panel.id = 'musicPanel';
+    panel.setAttribute('role', 'group');
+    panel.setAttribute('aria-label', 'Music controls');
+    panel.setAttribute('aria-hidden', 'true');
+    panel.innerHTML =
+      '<div class="mp-row">'
+      +   '<span class="mp-time" data-cur>0:00</span>'
+      +   '<input class="mp-range" data-seek type="range" min="0" max="1000" value="0" step="1" aria-label="Seek" disabled>'
+      +   '<span class="mp-time" data-dur>-:--</span>'
+      + '</div>'
+      + '<div class="mp-row">'
+      +   '<button class="mp-mute" type="button" aria-label="Mute">' + ICON + '</button>'
+      +   (volumeControllable
+            ? '<input class="mp-range" data-vol type="range" min="0" max="100" value="' + Math.round(MUSIC.volume*100) + '" step="1" aria-label="Volume">'
+            : '<span class="mp-note">volume follows your device</span>')
+      + '</div>';
+    document.body.appendChild(panel);
+
+    const seek = panel.querySelector('[data-seek]');
+    const vol = panel.querySelector('[data-vol]');
+    const curEl = panel.querySelector('[data-cur]');
+    const durEl = panel.querySelector('[data-dur]');
+    const muteBtn = panel.querySelector('.mp-mute');
+
+    let started = false;   // has playback ever begun
+    let muted = false;     // her choice via the mute button
+    let userVol = MUSIC.volume;
+    let fadeRaf = 0;
+    let scrubbing = false;
+
+    const fmt = (t)=>{
+      if(!isFinite(t) || t < 0) return '-:--';
+      const m = Math.floor(t/60), sec = Math.floor(t%60);
+      return m + ':' + (sec < 10 ? '0' : '') + sec;
+    };
+    const fill = (el)=> el.style.setProperty('--p', (el.value / el.max * 100) + '%');
+    if(vol) fill(vol);
+    fill(seek);
+
+    function refreshIcons(){
+      const off = muted || (volumeControllable && userVol === 0);
+      btn.classList.toggle('muted', off);
+      muteBtn.classList.toggle('muted', off);
+      muteBtn.setAttribute('aria-label', off ? 'Unmute' : 'Mute');
+    }
+
+    function fadeTo(target, ms, done){
+      cancelAnimationFrame(fadeRaf);
+      const from = audio.volume, t0 = performance.now();
+      (function step(now){
+        const k = Math.min(1, (now - t0) / ms);
+        audio.volume = Math.max(0, Math.min(1, from + (target - from) * k));
+        if(k < 1) fadeRaf = requestAnimationFrame(step);
+        else if(done) done();
+      })(t0);
+    }
+
+    function start(){
+      if(started || muted) return;
+      const p = audio.play();
+      const ok = ()=>{
+        started = true;
+        btn.classList.add('ready');
+        fadeTo(userVol, 2500);
+        ['click','touchend','keydown'].forEach(ev=> document.removeEventListener(ev, start, true));
+      };
+      if(p && p.then) p.then(ok).catch(()=>{ /* blocked: stay armed for the next tap */ });
+      else ok();
+    }
+    // the first tap or key press anywhere starts it (browsers don't allow audio before that)
+    ['click','touchend','keydown'].forEach(ev=> document.addEventListener(ev, start, true));
+    btn.classList.add('ready');
+
+    function setMuted(m){
+      muted = m;
+      refreshIcons();
+      if(m){
+        fadeTo(0, 300, ()=> audio.pause());
+      } else if(started){
+        if(userVol === 0) userVol = 0.5, vol && (vol.value = 50, fill(vol));
+        audio.play().catch(()=>{});
+        fadeTo(userVol, 600);
+      } else {
+        start();
+      }
+      refreshIcons(); // userVol may have just been restored from 0
+    }
+    muteBtn.addEventListener('click', ()=>{
+      // a zero-volume slider counts as muted, so tapping the icon brings the sound back
+      setMuted(volumeControllable && userVol === 0 ? false : !muted);
+    });
+
+    // ----- volume slider -----
+    if(vol){
+      vol.addEventListener('input', ()=>{
+        userVol = vol.value / 100;
+        fill(vol);
+        cancelAnimationFrame(fadeRaf);
+        if(userVol > 0 && muted){ setMuted(false); return; }
+        if(!muted) audio.volume = userVol;
+        refreshIcons();
+      });
+    }
+
+    // ----- seek slider -----
+    function syncDuration(){
+      const d = audio.duration;
+      if(isFinite(d) && d > 0){ seek.disabled = false; durEl.textContent = fmt(d); }
+    }
+    audio.addEventListener('loadedmetadata', syncDuration);
+    audio.addEventListener('durationchange', syncDuration);
+    audio.addEventListener('timeupdate', ()=>{
+      if(scrubbing || !isFinite(audio.duration) || audio.duration <= 0) return;
+      seek.value = Math.round(audio.currentTime / audio.duration * 1000);
+      fill(seek);
+      curEl.textContent = fmt(audio.currentTime);
+    });
+    seek.addEventListener('input', ()=>{
+      scrubbing = true;
+      fill(seek);
+      curEl.textContent = fmt(seek.value / 1000 * audio.duration);
+    });
+    seek.addEventListener('change', ()=>{
+      if(isFinite(audio.duration)) audio.currentTime = seek.value / 1000 * audio.duration;
+      scrubbing = false;
+    });
+
+    // ----- open / close -----
+    function setOpen(o){
+      panel.classList.toggle('open', o);
+      panel.setAttribute('aria-hidden', String(!o));
+      btn.setAttribute('aria-expanded', String(o));
+    }
+    btn.addEventListener('click', ()=> setOpen(!panel.classList.contains('open')));
+    document.addEventListener('pointerdown', (e)=>{
+      if(panel.classList.contains('open') && !panel.contains(e.target) && !btn.contains(e.target)) setOpen(false);
+    }, true);
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && panel.classList.contains('open')){ setOpen(false); btn.focus(); }
+    });
+
+    // don't keep playing in a background tab
+    document.addEventListener('visibilitychange', ()=>{
+      if(!started || muted) return;
+      if(document.hidden) audio.pause();
+      else { audio.play().catch(()=>{}); }
+    });
+
+    refreshIcons();
+  })();
+
+  // ---------- timeline ----------
+  // EDIT HERE: one entry per moment, oldest first.
+  // when = a date or year, title = a few words, text = a line or two, img = optional photo path (leave '' for none).
+  const TIMELINE = [
+    { when:'[year]', title:'[the beginning]',   text:'[Where it all started, as far back as either of you remembers.]', img:'' },
+    { when:'[year]', title:'[a first]',         text:'[A first you shared: a trip, a fight, a secret, a school day.]', img:'' },
+    { when:'[year]', title:'[a hard stretch]',  text:'[A time you got through together.]', img:'' },
+    { when:'[year]', title:'[a good one]',      text:'[A moment you still laugh about.]', img:'' },
+    { when:'[year]', title:'[now]',             text:'[Where you two are today.]', img:'' }
+  ];
+  const TIMELINE_END = 'and still going.';
+  (function buildTimeline(){
+    const tl = document.getElementById('tl');
+    TIMELINE.forEach(t=>{
+      const it = document.createElement('div');
+      it.className = 'tl-item';
+      const when = document.createElement('div'); when.className = 'tl-when'; when.textContent = t.when;
+      const title = document.createElement('div'); title.className = 'tl-title'; title.textContent = t.title;
+      const text = document.createElement('div'); text.className = 'tl-text'; text.textContent = t.text;
+      it.append(when, title, text);
+      if(t.img){ const im = document.createElement('img'); im.src = t.img; im.alt = t.title; im.decoding = 'async'; it.appendChild(im); }
+      tl.appendChild(it);
+    });
+    if(TIMELINE_END){ const e = document.createElement('div'); e.className = 'tl-item tl-end'; e.textContent = TIMELINE_END; tl.appendChild(e); }
+    const items = tl.querySelectorAll('.tl-item');
+    if(reduceMotion || !('IntersectionObserver' in window)){ items.forEach(i=> i.classList.add('show')); return; }
+    // each moment fades in as it scrolls into view inside the page
+    const io = new IntersectionObserver(es=> es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('show'); io.unobserve(e.target); } }),
+      { root: tl.closest('.letter-page'), threshold: 0.25 });
+    items.forEach(i=> io.observe(i));
+  })();
+
+  // ---------- typewriter reveal ----------
+  function wrapChars(node){
+    Array.from(node.childNodes).forEach(child=>{
+      if(child.nodeType === 3){
+        const frag = document.createDocumentFragment();
+        for(const ch of child.textContent){
+          const span = document.createElement('span');
+          span.className = 'ch';
+          span.textContent = ch;
+          frag.appendChild(span);
+        }
+        child.replaceWith(frag);
+      } else if(child.nodeType === 1){
+        wrapChars(child);
+      }
+    });
+  }
+  const QUILL_IMG = 'data:image/png;base64,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';
+  const INKWELL_IMG = 'data:image/png;base64,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';
+  // One rAF loop instead of one setTimeout per character; tap the page to finish instantly.
+  function typeReveal(scene){
+    const body = scene.querySelector('.letter-body');
+    if(!body || scene.dataset.typed) return;
+    wrapChars(body);
+    scene.dataset.typed = '1';
+    const chars = body.querySelectorAll('.ch');
+    const photo = scene.querySelector('.letter-photo');
+    const showPhoto = ()=> { if(photo) photo.classList.add('show'); };
+    if(reduceMotion){
+      chars.forEach(c=> c.classList.add('show'));
+      showPhoto();
+      return;
+    }
+    const page = scene.querySelector('.letter-page');
+    let start = performance.now() + 450; // let the page fade in first
+    const MS_PER_CHAR = 22; // quill pace; lower = faster
+    let shown = 0, raf = 0, last = performance.now(), dipUntil = 0, dipped = false;
+    const timers = [];
+
+    // quill (nib at its bottom-left) and the inkwell it dips into, both inside the fixed frame
+    const frame = scene.querySelector('.letter-frame');
+    const quill = document.createElement('div');
+    quill.className = 'quill';
+    quill.setAttribute('aria-hidden', 'true');
+    quill.innerHTML = '<img alt="" src="' + QUILL_IMG + '">';
+    const well = document.createElement('img');
+    well.className = 'inkwell';
+    well.alt = '';
+    well.setAttribute('aria-hidden', 'true');
+    well.src = INKWELL_IMG;
+    // the one dip per page leaves a small ink blot beside the well
+    const blot = document.createElement('div');
+    blot.className = 'blot';
+    blot.setAttribute('aria-hidden', 'true');
+    blot.style.setProperty('--rot', (Math.random() * 60 - 30).toFixed(0) + 'deg');
+    blot.innerHTML = '<svg viewBox="0 0 30 24"><path d="M9 12c-1-4 3-8 7-6 3 1 6 4 4 8-2 3-6 5-9 3-1-1-2-3-2-5z"/><circle cx="24" cy="5" r="1.8"/><circle cx="5" cy="19" r="1.2"/><circle cx="27" cy="17" r="1"/></svg>';
+    frame.append(blot, well, quill);
+
+    const NIB_X = 1.8, NIB_Y = 57.7; // nib position inside the 46px-wide quill image
+    function place(px, py){
+      quill.style.transform = 'translate(' + (px - NIB_X) + 'px,' + (py - NIB_Y) + 'px)';
+    }
+    function moveQuill(){
+      const c = chars[Math.max(0, shown - 1)];
+      const r = c.getBoundingClientRect(), f = frame.getBoundingClientRect();
+      place((shown ? r.right : r.left) - f.left, r.bottom - f.top - 3);
+    }
+    // quill starts at the top centre of the page
+    place(frame.getBoundingClientRect().width / 2, 72);
+    // travel to the well, dip, come back to the first word; the writing clock is held while this plays
+    function dip(now, delay){
+      const w = well.getBoundingClientRect(), f = frame.getBoundingClientRect();
+      const wx = w.left - f.left + w.width * 0.5, wy = w.top - f.top + 9;
+      dipUntil = now + delay + 1500;
+      timers.push(
+        setTimeout(()=>{ quill.classList.add('travel'); place(wx, wy); }, delay),
+        setTimeout(()=> place(wx, wy + 7), delay + 450),
+        setTimeout(()=>{ place(wx, wy); blot.classList.add('on'); }, delay + 850),
+        setTimeout(moveQuill, delay + 1050),
+        setTimeout(()=> quill.classList.remove('travel'), delay + 1480)
+      );
+    }
+    function hideQuill(){
+      timers.forEach(clearTimeout);
+      quill.classList.remove('on', 'travel');
+      blot.classList.add('on'); // the well and its blot stay on the page
+      setTimeout(()=> quill.remove(), 300);
+    }
+
+    function finish(){
+      cancelAnimationFrame(raf);
+      for(; shown < chars.length; shown++) chars[shown].classList.add('show');
+      hideQuill();
+      showPhoto();
+    }
+    function tick(now){
+      if(now < dipUntil){ // paused at the inkwell
+        start += now - last; last = now;
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      last = now;
+      const target = Math.min(chars.length, Math.max(0, Math.floor((now - start) / MS_PER_CHAR)));
+      while(shown < target){ chars[shown++].classList.add('show'); }
+      if(shown < chars.length){
+        if(now >= start){
+          if(!dipped){ // first beat: quill appears, dips once, then starts the first word
+            dipped = true;
+            quill.classList.add('on'); well.classList.add('on');
+            dip(now, 400); // let her see the quill at the top first
+          } else {
+            // keep the writing point in view as the letter runs past the bottom of the page
+            const c = chars[Math.max(0, shown - 1)];
+            const limit = page.getBoundingClientRect().bottom - 56, bottom = c.getBoundingClientRect().bottom;
+            if(bottom > limit) page.scrollTop += bottom - limit;
+            moveQuill();
+          }
+        }
+        raf = requestAnimationFrame(tick);
+      } else { hideQuill(); showPhoto(); }
+    }
+    page.addEventListener('pointerdown', finish, {once:true});
+    raf = requestAnimationFrame(tick);
+  }
+
+  function render(){
+    scenes.forEach((s,i)=> s.classList.toggle('active', i===current));
+    dots.forEach((d,i)=> d.classList.toggle('on', i===current));
+    document.getElementById('prevBtn').disabled = current===0;
+    document.getElementById('nextBtn').disabled = current===total-1 || (scenes[current].id === 'scene-tree' && !treeDone);
+    const active = scenes[current];
+    if(active && active.classList.contains('letter')) typeReveal(active);
+    const onPaper = !!(active && active.classList.contains('letter'));
+    snowEl.classList.toggle('on-paper', onPaper);
+    document.body.classList.toggle('on-paper', onPaper);
+    // status bar follows the page: parchment on the letter, forest elsewhere
+    themeColorMeta.setAttribute('content', active && active.classList.contains('letter') ? '#ECE1C6' : '#152018');
+  }
+  function goTo(i){
+    if(i<0 || i>=total) return;
+    current = i;
+    render();
+  }
+  function step(delta){
+    if(delta > 0 && scenes[current].id === 'scene-tree' && !treeDone) return;
+    goTo(current+delta);
+  }
+
+  document.addEventListener('keydown', (e)=>{
+    // arrow keys move the caret in the name field, not the page
+    if(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if(e.key === 'ArrowRight') step(1);
+    if(e.key === 'ArrowLeft') step(-1);
+  });
+
+  // simple swipe support (horizontal intent only, so vertical scrolling in the letter never flips the page)
+  let touchX = null, touchY = null;
+  document.getElementById('stage').addEventListener('touchstart', e=>{
+    touchX = e.touches[0].clientX;
+    touchY = e.touches[0].clientY;
+  }, {passive:true});
+  document.getElementById('stage').addEventListener('touchend', e=>{
+    if(touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    const dy = e.changedTouches[0].clientY - touchY;
+    if(Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5){ step(dx < 0 ? 1 : -1); }
+    touchX = touchY = null;
+  }, {passive:true});
+
+  // snow
+  const snowEl = document.getElementById('snow');
+  const FLAKES = window.innerWidth < 480 ? 30 : 52;
+  for(let i=0;i<FLAKES;i++){
+    const f = document.createElement('div');
+    f.className = 'flake';
+    const left = Math.random()*100;
+    const dur = 9 + Math.random()*10;
+    const delay = Math.random()*-20;
+    const drift = (Math.random()*40-20) + 'px';
+    const size = (2 + Math.random()*2).toFixed(1) + 'px';
+    f.style.left = left+'vw';
+    f.style.width = size; f.style.height = size;
+    f.style.setProperty('--drift', drift);
+    f.style.opacity = (0.45 + Math.random()*0.55).toFixed(2);
+    f.style.animationDuration = dur+'s';
+    f.style.animationDelay = delay+'s';
+    snowEl.appendChild(f);
+  }
+
+  // ---------- hold a final candle to find the secret note ----------
+  const secretScene = document.getElementById('scene-secret');
+  function openSecret(){ secretScene.classList.add('active'); }
+  function closeSecret(){ secretScene.classList.remove('active'); }
+  secretScene.addEventListener('click', closeSecret);
+
+  document.querySelectorAll('.final-candles .candle').forEach(candle=>{
+    let timer = null;
+    const HOLD_MS = 1200;
+    function begin(e){
+      if(e.pointerType === 'mouse' && e.button !== 0) return;
+      candle.classList.add('holding');
+      clearTimeout(timer);
+      timer = setTimeout(()=>{
+        candle.classList.remove('holding');
+        openSecret();
+      }, HOLD_MS);
+    }
+    function cancel(){
+      clearTimeout(timer);
+      candle.classList.remove('holding');
+    }
+    candle.addEventListener('pointerdown', begin);
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>{
+      candle.addEventListener(ev, cancel);
+    });
+    // no long-press context menu / callout on a hold gesture
+    candle.addEventListener('contextmenu', e=> e.preventDefault());
+  });
+
+  // ---------- the list: password gate + blackout + candle blow-out reveal ----------
+  const listGate = document.getElementById('listGate');
+  const listCard = document.getElementById('listCard');
+  const listForm = document.getElementById('listForm');
+  const listInput = document.getElementById('listInput');
+  const listMsg = document.getElementById('listMsg');
+  const blackout = document.getElementById('blackout');
+  const listReveal = document.getElementById('listReveal');
+  const revealFlame = document.getElementById('revealFlame');
+  const revealText = document.getElementById('revealText');
+
+  const ACCEPTED_NAMES = ['maica'];
+
+  function spawnSmoke(){
+    const wisp = document.createElement('div');
+    wisp.className = 'smoke-wisp';
+    revealFlame.parentElement.appendChild(wisp);
+    setTimeout(()=> wisp.remove(), 1500);
+  }
+
+  // ---------- the surprise: one silly photo flashes on her screen, tinted blue, with a boom ----------
+  // EDIT HERE: img = the photo (e.g. 'photos/silly.jpg'), sound = the boom (e.g. 'sounds/boom.mp3').
+  // Leave img '' to switch it off. It fires once, at a random moment minSec–maxSec after she gets past the name gate.
+  const PRANK = { img:'', sound:'', minSec:25, maxSec:70, holdMs:900 };
+  let prankArmed = false;
+  function armPrank(){
+    if(prankArmed || !PRANK.img) return;
+    prankArmed = true;
+    let boom = null;
+    if(PRANK.sound){
+      boom = new Audio(PRANK.sound);
+      boom.preload = 'auto';
+      // unlock it inside this tap, otherwise iOS refuses to play it later from a timer
+      boom.muted = true;
+      boom.play().then(()=>{ boom.pause(); boom.currentTime = 0; boom.muted = false; }).catch(()=>{ boom.muted = false; });
+    }
+    const el = document.createElement('div');
+    el.className = 'prank';
+    el.setAttribute('aria-hidden', 'true');
+    const im = document.createElement('img');
+    im.alt = ''; im.src = PRANK.img;
+    el.appendChild(im);
+    document.body.appendChild(el);
+    function fire(){
+      if(secretScene.classList.contains('active')){ setTimeout(fire, 4000); return; } // never on top of the secret note
+      el.classList.add('on');
+      if(boom){ boom.currentTime = 0; boom.play().catch(()=>{}); }
+      setTimeout(()=> el.classList.remove('on'), PRANK.holdMs);
+    }
+    setTimeout(fire, (PRANK.minSec + Math.random() * (PRANK.maxSec - PRANK.minSec)) * 1000);
+  }
+
+  listForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const val = listInput.value.trim().toLowerCase();
+    if(ACCEPTED_NAMES.includes(val)){
+      armPrank();
+      listMsg.textContent = '';
+      listInput.blur();
+      blackout.classList.add('show');
+      setTimeout(()=>{
+        listGate.style.display = 'none';
+        listReveal.classList.add('show');
+        setTimeout(()=> blackout.classList.remove('show'), 250);
+        setTimeout(()=>{
+          revealFlame.classList.add('blowout');
+          spawnSmoke();
+        }, 1700);
+        setTimeout(()=> revealText.classList.add('show'), 2400);
+      }, 800);
+    } else {
+      listMsg.textContent = "hmm — check the spelling, try again";
+      listCard.classList.remove('nope'); void listCard.offsetWidth; listCard.classList.add('nope');
+      listInput.select();
+    }
+  });
+
+  // ---------- the tree: ornaments open in order, the star reveals the letter ----------
+  // EDIT HERE: one entry per ornament, listed bottom to top.
+  // x / y = position on the tree (percent). color = ornament color.
+  // img = optional photo (a path like "photos/1.jpg" on your own site, or a data: URI). Leave '' for text only.
+  const ORNAMENTS = [
+    { x:30,   y:70.5, color:'#8B2E2E', title:'[ornament 1 title]', text:'[A memory, a photo caption, or a few words for the first ornament.]', img:'' },
+    { x:68.3, y:67,   color:'#B8935A', title:'[ornament 2 title]', text:'[Second ornament — write whatever you want her to find here.]', img:'' },
+    { x:42.7, y:56.3, color:'#5B2A2A', title:'[ornament 3 title]', text:'[Third ornament.]', img:'' },
+    { x:61.7, y:51.3, color:'#D8B978', title:'[ornament 4 title]', text:'[Fourth ornament.]', img:'' },
+    { x:40,   y:37.5, color:'#8B2E2E', title:'[ornament 5 title]', text:'[Fifth ornament.]', img:'' },
+    { x:53.3, y:27,   color:'#B8935A', title:'[ornament 6 title]', text:'[Last ornament before the star.]', img:'' }
+  ];
+
+  const treeBox = document.getElementById('treeBox');
+  const treeHint = document.getElementById('treeHint');
+  const starBtn = document.getElementById('starBtn');
+  const ornModal = document.getElementById('ornModal');
+  const ornCard = document.getElementById('ornCard');
+  const ornPhoto = document.getElementById('ornPhoto');
+  const ornTitle = document.getElementById('ornTitle');
+  const ornText = document.getElementById('ornText');
+
+  let opened = 0;        // ornaments completed, in order
+  let viewing = -1;      // ornament currently open in the card
+  let treeDone = false;  // becomes true once the star is clicked
+
+  // Ornament shapes, drawn in a 40×40 box with the hook + gold cap on top.
+  // Each ORNAMENTS entry gets one in order; to choose yourself add shape:'ball' | 'drop' | 'bell' | 'diamond' | 'heart' | 'swirl'.
+  const BALL = 'M20 9a15 15 0 1 1 0 30a15 15 0 1 1 0-30Z';
+  const ORN_SHAPES = {
+    ball:    { d:BALL, hl:[14,17],
+               det:'<path d="M5.4 22Q20 28.5 34.6 22V26.5Q20 33 5.4 26.5Z" fill="#D8B978" opacity=".92"/>' },
+    drop:    { d:'M20 9C20 9 33.5 24 33.5 31A13.5 13.5 0 0 1 6.5 31C6.5 24 20 9 20 9Z', hl:[15,27],
+               det:'<path d="M20 15V38" stroke="#D8B978" stroke-width="1" opacity=".5" fill="none"/>' },
+    bell:    { d:'M20 9C12.5 9 10.5 18 9.5 27L6 33.5H34L30.5 27C29.5 18 27.5 9 20 9Z', hl:[15,19],
+               det:'<ellipse cx="20" cy="34" rx="14" ry="2.6" fill="#D8B978"/><circle cx="20" cy="37.5" r="2.8" fill="#D8B978"/>' },
+    diamond: { d:'M20 9L33 19L20 39L7 19Z', hl:null,
+               det:'<path d="M20 9L7 19L20 39Z" fill="#fff" opacity=".2"/><path d="M20 9L33 19L20 39Z" fill="#000" opacity=".14"/><path d="M7 19H33" stroke="#fff" stroke-width=".8" opacity=".4" fill="none"/>' },
+    heart:   { d:'M20 38C9 30 6 23 6 18.5C6 13 10 10.5 13.5 10.5C16.5 10.5 18.8 12.2 20 14.5C21.2 12.2 23.5 10.5 26.5 10.5C30 10.5 34 13 34 18.5C34 23 31 30 20 38Z', hl:[13,17],
+               det:'<path d="M20 9V14.5" stroke="#B8935A" stroke-width="1.2" fill="none"/>' },
+    swirl:   { d:BALL, hl:[14,17],
+               det:'<path d="M10 17Q20 24 30 17M7 24Q20 33 33 24M10 31Q20 38 30 31" stroke="#D8B978" stroke-width="1.6" fill="none" stroke-linecap="round"/>' }
+  };
+  const ORN_ORDER = ['ball','drop','bell','diamond','heart','swirl'];
+  function ornSvg(name){
+    const s = ORN_SHAPES[name] || ORN_SHAPES.ball;
+    const hl = s.hl
+      ? '<ellipse cx="'+s.hl[0]+'" cy="'+s.hl[1]+'" rx="4.5" ry="2.8" fill="#fff" opacity=".42" transform="rotate(-30 '+s.hl[0]+' '+s.hl[1]+')"/>'
+      : '';
+    return '<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">'
+      + '<path d="M20 0V5" stroke="#B8935A" stroke-width="1.2" fill="none"/>'
+      + '<rect x="16" y="4" width="8" height="5" rx="1.2" fill="#D8B978"/>'
+      + '<path d="'+s.d+'" style="fill:var(--c)"/>'
+      + '<path d="'+s.d+'" fill="url(#ornShade)"/>'
+      + s.det + hl + '</svg>';
+  }
+
+  const ornEls = ORNAMENTS.map((o, i)=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'orn';
+    b.style.left = o.x + '%';
+    b.style.top = o.y + '%';
+    b.style.setProperty('--c', o.color);
+    b.setAttribute('aria-label', 'Ornament ' + (i+1));
+    b.innerHTML = ornSvg(o.shape || ORN_ORDER[i % ORN_ORDER.length]);
+    b.addEventListener('click', ()=> openOrn(i));
+    treeBox.appendChild(b);
+    return b;
+  });
+
+  function refreshTree(){
+    ornEls.forEach((b, i)=>{
+      b.classList.toggle('done', i < opened);
+      b.classList.toggle('active', i === opened);
+      b.classList.toggle('locked', i > opened);
+    });
+    const all = opened >= ORNAMENTS.length;
+    starBtn.classList.toggle('ready', all);
+    if(all) treeHint.textContent = "the star's been waiting";
+    else if(opened === 0) treeHint.textContent = 'start at the bottom — one ornament at a time';
+    else treeHint.textContent = opened + ' of ' + ORNAMENTS.length + ' — keep climbing';
+  }
+
+  function openOrn(i){
+    if(i > opened){
+      treeHint.textContent = 'one at a time — follow the glow';
+      return;
+    }
+    const o = ORNAMENTS[i];
+    viewing = i;
+    ornPhoto.innerHTML = '';
+    if(o.img){
+      const im = document.createElement('img');
+      im.src = o.img;
+      im.alt = '';
+      ornPhoto.appendChild(im);
+    }
+    ornTitle.textContent = o.title;
+    ornText.textContent = o.text;
+    ornCard.classList.remove('pop');
+    void ornCard.offsetWidth;
+    ornCard.classList.add('pop');
+    ornModal.classList.add('open');
+  }
+
+  function closeOrn(){
+    if(!ornModal.classList.contains('open')) return;
+    ornModal.classList.remove('open');
+    if(viewing === opened) opened++;
+    viewing = -1;
+    refreshTree();
+  }
+  document.getElementById('ornClose').addEventListener('click', closeOrn);
+  ornModal.addEventListener('click', (e)=>{ if(e.target === ornModal) closeOrn(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeOrn(); });
+
+  starBtn.addEventListener('click', ()=>{
+    if(starBtn.classList.contains('burst')) return;
+    if(opened < ORNAMENTS.length){
+      treeHint.textContent = 'not yet — the star comes last';
+      starBtn.classList.remove('nope'); void starBtn.offsetWidth; starBtn.classList.add('nope');
+      return;
+    }
+    starBtn.classList.add('burst');
+    setTimeout(()=>{
+      treeDone = true;
+      const idx = scenes.findIndex(s=> s.id === 'scene-letter1');
+      if(idx !== -1) goTo(idx);
+      setTimeout(()=> starBtn.classList.remove('burst'), 1200);
+    }, 900);
+  });
+
+  refreshTree();
+
+  render();
+</script>
+</body>
+</html>

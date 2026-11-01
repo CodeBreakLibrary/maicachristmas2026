@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#152018" id="themeColor">
 <meta name="color-scheme" content="dark">
-<title>for the person who let me use her name in english</title>
+<title>For Maica — Carpe Diem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Courier+Prime:ital@0;1&display=swap" rel="stylesheet">
@@ -407,6 +407,15 @@
     color:rgba(60,45,25,0.72);
     text-align:center;
   }
+  .list-name{
+    margin-top:6px; text-align:center;
+    font-family:'Cormorant Garamond', serif; font-style:italic; font-size:18px; line-height:1.2;
+    color:var(--ink); overflow-wrap:anywhere;
+    opacity:0; transform:translateY(4px);
+    transition:opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+  }
+  .list-col + .list-col .list-name{ color:var(--oxblood); }
+  .list-name.in{ opacity:1; transform:none; }
   .list-prompt{
     text-align:center;
     font-family:'Cormorant Garamond', serif;
@@ -1156,7 +1165,7 @@
     <div class="letter-frame">
       <article class="letter-page">
         <div class="letter-kicker">Christmas — 2026</div>
-        <div class="letter-salutation">hey twinn,</div>
+        <div class="letter-salutation">My dear Maica,</div>
         <div class="letter-body">
           <p>so first things first, i trust that you wont judge my lack of grammar and punctuation here 🙂. Merry Christmas twinn! so i want to thank you for really being here for me when i need you. dont think i forgot about what you wrote me for my birthday, it’s the most special thing i’ve received this year (especially since ur the only one who wrote something and not just a generic happy birthday).</p>
           <p>I really want to thank you for being my best friend even if i may not be yours. it really means a lot to me</p>
@@ -1728,7 +1737,35 @@
   const revealFlame = document.getElementById('revealFlame');
   const revealText = document.getElementById('revealText');
 
-  const ACCEPTED_NAMES = ['maica'];
+  // EDIT HERE. NICE_LIST: names that get in (case and extra spaces don't matter).
+  // NAUGHTY_LIST: names that land on the naughty column with their own line, but do not get in.
+  // Any other name gets "not on either list". Add as many as you like.
+  const NICE_LIST = ['maica'];
+  const NAUGHTY_LIST = [
+    { name:'simone', line:"simone? naughty. you already know why." },
+    { name:'stacey', line:"stacey? naughty. it's in the records." },
+    { name:'ava',    line:"ava? naughty. also in the records." }
+  ];
+  // Already written on the list before she types anything, exactly as spelled here.
+  const LIST_PREFILL = {
+    nice:    ['me, duh'],
+    naughty: ['simone', 'stacey', 'BASICALLY ALL UR OPPS', 'ava']
+  };
+  const listCols = document.querySelectorAll('.list-col');
+  const clean = v => v.trim().replace(/\s+/g, ' ').toLowerCase();
+  // the checked name gets written into its column, once
+  function writeName(col, text, asWritten){
+    const key = clean(text);
+    if(Array.from(col.querySelectorAll('.list-name')).some(n=> n.dataset.key === key)) return;
+    const n = document.createElement('div');
+    n.className = 'list-name';
+    n.dataset.key = key;
+    n.textContent = asWritten ? text : key.replace(/(^|\s)\S/g, c=> c.toUpperCase()); // typed names get tidy casing
+    col.appendChild(n);
+    void n.offsetWidth; n.classList.add('in');
+  }
+  LIST_PREFILL.nice.forEach(t=> writeName(listCols[0], t, true));
+  LIST_PREFILL.naughty.forEach(t=> writeName(listCols[1], t, true));
 
   function spawnSmoke(){
     const wisp = document.createElement('div');
@@ -1771,12 +1808,15 @@
 
   listForm.addEventListener('submit', (e)=>{
     e.preventDefault();
-    const val = listInput.value.trim().toLowerCase();
-    if(ACCEPTED_NAMES.includes(val)){
+    const raw = listInput.value, val = clean(raw);
+    if(!val) return;
+    const naughty = NAUGHTY_LIST.find(n=> clean(n.name) === val);
+    if(NICE_LIST.some(n=> clean(n) === val)){
       armPrank();
       listMsg.textContent = '';
       listInput.blur();
-      blackout.classList.add('show');
+      writeName(listCols[0], raw);
+      setTimeout(()=> blackout.classList.add('show'), 600); // let her see her name land on the nice list
       setTimeout(()=>{
         listGate.style.display = 'none';
         listReveal.classList.add('show');
@@ -1786,9 +1826,14 @@
           spawnSmoke();
         }, 1700);
         setTimeout(()=> revealText.classList.add('show'), 2400);
-      }, 800);
+      }, 1400);
+    } else if(naughty){
+      writeName(listCols[1], raw);
+      listMsg.textContent = naughty.line;
+      listCard.classList.remove('nope'); void listCard.offsetWidth; listCard.classList.add('nope');
+      listInput.select();
     } else {
-      listMsg.textContent = "hmm — check the spelling, try again";
+      listMsg.textContent = "hmm — that name isn't on either list. check the spelling, try again";
       listCard.classList.remove('nope'); void listCard.offsetWidth; listCard.classList.add('nope');
       listInput.select();
     }

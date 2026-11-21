@@ -846,7 +846,7 @@
   /* ---------- ascii tree video ---------- */
   .ascii-tree{ padding:0; }
   .scene-video{
-    display:block; width:100%; max-width:560px; height:auto; max-height:100%;
+    display:block; width:100%; height:100%;
     object-fit:contain;
     /* soften the edges so the video's night sky melts into the page */
     -webkit-mask-image:linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent), linear-gradient(180deg, transparent, #000 8%, #000 92%, transparent);
@@ -1308,7 +1308,7 @@
   // ---------- background music ----------
   // EDIT HERE: src = a path next to this file, e.g. 'music/song.mp3' (mp3 or m4a play everywhere). Leave '' for no music.
   // volume = starting volume, 0 to 1. She can change it with the slider (iPhones always use the device volume).
-  const MUSIC = { src:'', volume:0.5 };
+  const MUSIC = { src:'music/lastchristmas.mp3', volume:0.5 };
 
   (function setupMusic(){
     if(!MUSIC.src) return;
@@ -1497,11 +1497,11 @@
   // EDIT HERE: one entry per moment, oldest first.
   // when = a date or year, title = a few words, text = a line or two, img = optional photo path (leave '' for none).
   const TIMELINE = [
-    { when:'[2025]', title:'[the beginning]',   text:'[i first started texting u when it was ur birthday last year]', img:'' },
-    { when:'[2025]', title:'[the why]',         text:'[and its bc of stupid belly conklin which is why we kept on texting]', img:'' },
-    { when:'[2026]', title:'[oops]',  text:'[i remember i sent u a picture of my toilet and u were so grossed out and we barely texted for a certain time lmao]', img:'' },
-    { when:'[2026]', title:'[hehehehehe]',      text:'[and somehow i always tell u abt my problems (im never running out of them)]', img:'' },
-    { when:'[2026]', title:'[now]',             text:'[now its christmas]', img:'' }
+    { when:'2025', title:'the beginning',   text:'i first started texting u when it was ur birthday last year', img:'' },
+    { when:'2025', title:'the why',         text:'and its bc of stupid belly conklin which is why we kept on texting', img:'' },
+    { when:'2026', title:'oops',  text:'i remember i sent u a picture of my toilet and u were so grossed out and we barely texted for a certain time lmao', img:'' },
+    { when:'2026', title:'hehehehehe',      text:'and somehow i always tell u abt my problems (im never running out of them)', img:'' },
+    { when:'2026', title:'now',             text:'now its christmas', img:'' }
   ];
   const TIMELINE_END = 'and still going.';
   (function buildTimeline(){
@@ -1803,8 +1803,9 @@
 
   // ---------- the surprise: one silly photo flashes on her screen, tinted blue, with a boom ----------
   // EDIT HERE: img = the photo (e.g. 'photos/silly.jpg'), sound = the boom (e.g. 'sounds/boom.mp3').
-  // Leave img '' to switch it off. It fires once, at a random moment minSec–maxSec after she gets past the name gate.
-  const PRANK = { img:'photos/silly.jpg', sound:'sounds/boom.mp3', minSec:25, maxSec:70, holdMs:900 };
+  // Leave img '' to switch it off. The first flash lands firstMin–firstMax seconds after she gets past the name gate,
+  // then it comes back every againMin–againMax seconds, up to times flashes in all.
+  const PRANK = { img:'photos/silly.jpg', sound:'sounds/boom.mp3', firstMin:15, firstMax:40, againMin:30, againMax:75, times:6, holdMs:900 };
   let prankArmed = false;
   function armPrank(){
     if(prankArmed || !PRANK.img) return;
@@ -1824,13 +1825,16 @@
     im.alt = ''; im.src = PRANK.img;
     el.appendChild(im);
     document.body.appendChild(el);
+    let flashes = 0;
+    const wait = (a, b)=> (a + Math.random() * (b - a)) * 1000;
     function fire(){
       if(secretScene.classList.contains('active')){ setTimeout(fire, 4000); return; } // never on top of the secret note
       el.classList.add('on');
       if(boom){ boom.currentTime = 0; boom.play().catch(()=>{}); }
       setTimeout(()=> el.classList.remove('on'), PRANK.holdMs);
+      if(++flashes < PRANK.times) setTimeout(fire, wait(PRANK.againMin, PRANK.againMax));
     }
-    setTimeout(fire, (PRANK.minSec + Math.random() * (PRANK.maxSec - PRANK.minSec)) * 1000);
+    setTimeout(fire, wait(PRANK.firstMin, PRANK.firstMax));
   }
 
   listForm.addEventListener('submit', (e)=>{
@@ -1871,12 +1875,12 @@
   // x / y = position on the tree (percent). color = ornament color.
   // img = optional photo (a path like "photos/1.jpg" on your own site, or a data: URI). Leave '' for text only.
   const ORNAMENTS = [
-    { x:30,   y:70.5, color:'#8B2E2E', title:'[FUHHHHHH]', text:'[this took so long to make]', img:'' },
-    { x:68.3, y:67,   color:'#B8935A', title:'[insert banging my head on the wall]', text:'[I hope u like the next 3 slides? i lwk forgot how many slides]', img:'' },
-    { x:42.7, y:56.3, color:'#5B2A2A', title:'[e]', text:'[so uh rapidly press the next ones ples]', img:'' },
-    { x:61.7, y:51.3, color:'#D8B978', title:'[why did i make so many]', text:'[.....theres like 2 more]', img:'' },
-    { x:40,   y:37.5, color:'#8B2E2E', title:'[hehehehehe]', text:'[...so uh remember those times u always said smd]', img:'' },
-    { x:53.3, y:27,   color:'#B8935A', title:'[#generationallockin]', text:'[okay lock in time guys press the star]', img:'' }
+    { x:30,   y:70.5, color:'#8B2E2E', title:'FUHHHHHH', text:'this took so long to make', img:'' },
+    { x:68.3, y:67,   color:'#B8935A', title:'insert banging my head on the wall', text:'I hope u like the next 3 slides? i lwk forgot how many slides', img:'' },
+    { x:42.7, y:56.3, color:'#5B2A2A', title:'e', text:'so uh rapidly press the next ones ples', img:'' },
+    { x:61.7, y:51.3, color:'#D8B978', title:'why did i make so many', text:'.....theres like 2 more', img:'' },
+    { x:40,   y:37.5, color:'#8B2E2E', title:'hehehehehe', text:'...so uh remember those times u always said smd', img:'' },
+    { x:53.3, y:27,   color:'#B8935A', title:'#generationallockin', text:'okay lock in time guys press the star', img:'' }
   ];
 
   const treeBox = document.getElementById('treeBox');

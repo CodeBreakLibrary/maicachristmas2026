@@ -1836,7 +1836,7 @@
   // EDIT HERE: img = the photo (e.g. 'photos/silly.jpg'), sound = the boom (e.g. 'sounds/boom.mp3').
   // Leave img '' to switch it off. The first flash lands firstMin–firstMax seconds after she gets past the name gate,
   // then it comes back every againMin–againMax seconds, up to times flashes in all.
-  const PRANK = { img:'photos/silly.jpg', sound:'sounds/boom.mp3', firstMin:15, firstMax:40, againMin:30, againMax:75, times:6, holdMs:900 };
+  const PRANK = { img:'photos/silly.jpg', sound:'sounds/boom.mp3', firstMin:5, firstMax:10, againMin:30, againMax:40, times:6, holdMs:900 };
   let prankArmed = false;
   function armPrank(){
     if(prankArmed || !PRANK.img) return;

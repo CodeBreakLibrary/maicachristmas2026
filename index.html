@@ -843,6 +843,14 @@
   }
   .quill.on, .inkwell.on{ opacity:1; }
 
+  .admin-badge{
+    position:fixed; left:12px; bottom:12px; z-index:200;
+    padding:3px 8px; border:1px solid rgba(216,185,120,0.5); border-radius:3px;
+    font-family:'Courier Prime', monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+    color:#D8B978; background:rgba(21,32,24,0.7); pointer-events:none;
+  }
+  .admin-badge[hidden]{ display:none; }
+
   /* ---------- ascii tree video ---------- */
   .ascii-tree{ padding:0; }
   .scene-video{
@@ -1650,11 +1658,28 @@
     raf = requestAnimationFrame(tick);
   }
 
+  // ---------- locks ----------
+  // Add #admin to the very end of the link (…/maicachristmas2026/#admin) to skip the name list and the ornaments.
+  const isAdmin = ()=> location.hash.toLowerCase() === '#admin';
+  let nameDone = false; // becomes true once a name from NICE_LIST is accepted
+  function lockedAt(id){ // is "next" locked on this scene?
+    if(isAdmin()) return false;
+    if(id === 'scene-epigraph') return !nameDone;
+    if(id === 'scene-tree') return !treeDone;
+    return false;
+  }
+  const adminBadge = document.createElement('div');
+  adminBadge.className = 'admin-badge';
+  adminBadge.textContent = 'admin';
+  document.body.appendChild(adminBadge);
+  window.addEventListener('hashchange', ()=> render());
+
   function render(){
+    adminBadge.hidden = !isAdmin();
     scenes.forEach((s,i)=> s.classList.toggle('active', i===current));
     dots.forEach((d,i)=> d.classList.toggle('on', i===current));
     document.getElementById('prevBtn').disabled = current===0;
-    document.getElementById('nextBtn').disabled = current===total-1 || (scenes[current].id === 'scene-tree' && !treeDone);
+    document.getElementById('nextBtn').disabled = current===total-1 || lockedAt(scenes[current].id);
     const active = scenes[current];
     if(active && active.classList.contains('letter')) typeReveal(active);
     snowEl.classList.toggle('hide', !!(active && active.dataset.nosnow)); // the video brings its own snow
@@ -1678,7 +1703,13 @@
     render();
   }
   function step(delta){
-    if(delta > 0 && scenes[current].id === 'scene-tree' && !treeDone) return;
+    if(delta > 0 && lockedAt(scenes[current].id)){
+      if(scenes[current].id === 'scene-epigraph'){ // swipe or arrow key before she's on the list
+        listMsg.textContent = 'put your name on the list first';
+        listCard.classList.remove('nope'); void listCard.offsetWidth; listCard.classList.add('nope');
+      }
+      return;
+    }
     goTo(current+delta);
   }
 
@@ -1843,6 +1874,8 @@
     if(!val) return;
     const naughty = NAUGHTY_LIST.find(n=> clean(n.name) === val);
     if(NICE_LIST.some(n=> clean(n) === val)){
+      nameDone = true;
+      render(); // unlocks the next arrow
       armPrank();
       listMsg.textContent = '';
       listInput.blur();
@@ -1873,14 +1906,13 @@
   // ---------- the tree: ornaments open in order, the star reveals the letter ----------
   // EDIT HERE: one entry per ornament, listed bottom to top.
   // x / y = position on the tree (percent). color = ornament color.
-  // img = optional photo (a path like "photos/1.jpg" on your own site, or a data: URI). Leave '' for text only.
   const ORNAMENTS = [
-    { x:30,   y:70.5, color:'#8B2E2E', title:'FUHHHHHH', text:'this took so long to make', img:'' },
-    { x:68.3, y:67,   color:'#B8935A', title:'insert banging my head on the wall', text:'I hope u like the next 3 slides? i lwk forgot how many slides', img:'' },
-    { x:42.7, y:56.3, color:'#5B2A2A', title:'e', text:'so uh rapidly press the next ones ples', img:'' },
-    { x:61.7, y:51.3, color:'#D8B978', title:'why did i make so many', text:'.....theres like 2 more', img:'' },
-    { x:40,   y:37.5, color:'#8B2E2E', title:'hehehehehe', text:'...so uh remember those times u always said smd', img:'' },
-    { x:53.3, y:27,   color:'#B8935A', title:'#generationallockin', text:'okay lock in time guys press the star', img:'' }
+    { x:30,   y:70.5, color:'#8B2E2E', title:'FUHHHHHH', text:'this took so long to make' },
+    { x:68.3, y:67,   color:'#B8935A', title:'insert banging my head on the wall', text:'I hope u like the next 3 slides? i lwk forgot how many slides' },
+    { x:42.7, y:56.3, color:'#5B2A2A', title:'e', text:'so uh rapidly press the next ones ples' },
+    { x:61.7, y:51.3, color:'#D8B978', title:'why did i make so many', text:'.....theres like 2 more' },
+    { x:40,   y:37.5, color:'#8B2E2E', title:'hehehehehe', text:'...so uh remember those times u always said smd' },
+    { x:53.3, y:27,   color:'#B8935A', title:'#generationallockin', text:'okay lock in time guys press the star' }
   ];
 
   const treeBox = document.getElementById('treeBox');
